@@ -102,6 +102,21 @@ The output is a LAMMPS `.data` file compatible with ReaxFF and similar force fie
 
 ---
 
+## 🧠 Core Algorithm & Collision-Aware Packing
+
+PyPack uses a collision-aware placement strategy based on a **k-dimensional tree (cKDTree)** spatial index from SciPy. This efficiently checks for overlaps during molecule placement within a cubic periodic boundary box.
+
+### Core Highlights:
+
+* **Molecule Rotation**: Each molecule is randomly rotated along all three axes before placement.
+* **Placement Attempts**: Each molecule gets up to `max_attempts` (default: 2000) tries to be placed without overlapping any other molecule.
+* **Minimum Distance**: A user-defined `min_dist` (e.g., 1.2 Å) is enforced between any two atoms using distance thresholding.
+* **Box Size Adjustment**: If placement fails after 5 packing attempts, the box size is increased by **20% incrementally** and retried.
+
+This iterative strategy ensures valid, non-overlapping configurations for complex molecular systems.
+
+---
+
 ## ⚠️ Notes
 
 * High-density configurations may fail placement—box size auto-expands over 5 attempts.
