@@ -116,7 +116,7 @@ class PackGUI(tk.Tk):
             )
 
             # Write output with selected atom_style
-            pypack.write(self.out_var.get(), system, format="lammps-data", atom_style=self.atom_style_var.get())
+            pypack.write(self.out_var.get(), system, format="lammps-data", atom_style=self.atom_style_var.get(), masses=True)
             messagebox.showinfo("Success", f"LAMMPS input written to:\n{self.out_var.get()}")
         except Exception as e:
             messagebox.showerror("Error", str(e))
