@@ -119,5 +119,5 @@ if __name__ == "__main__":
         {"name": "n-dodecane", "smiles": "CCCCCCCCCCCC", "count": 20}
     ]
     system = build_system(molecules, density_gcc=0.1, temperature=3200, min_dist=1.2, max_attempts=2000)
-    write("reax_input.data", system, format="lammps-data", atom_style="charge")
+    write("reax_input.data", system, format="lammps-data", atom_style="charge", masses=True)
     print(" LAMMPS ReaxFF input file written to: reax_input.data")
