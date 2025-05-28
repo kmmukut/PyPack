@@ -53,7 +53,7 @@ python gui.py
 
 * Add molecules with name, SMILES, and count
 * Set parameters: density, temperature, min distance, max placement attempts
-* Choose LAMMPS atom style (`charge`, `atomic`, `molecular`)
+* Choose LAMMPS atom style (`charge`, `atomic`, `full`)
 * Specify output filename and run
 
 ### 2. Command Line Usage
