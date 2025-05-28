@@ -98,7 +98,7 @@ The output is a LAMMPS `.data` file compatible with ReaxFF and similar force fie
 
 * `charge` (default)
 * `atomic`
-* `molecular`
+* `full`
 
 ---
 
