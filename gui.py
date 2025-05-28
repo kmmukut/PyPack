@@ -70,7 +70,7 @@ class PackGUI(tk.Tk):
         style_row = tk.Frame(param_frame)
         tk.Label(style_row, text="Atom style", width=15).pack(side=tk.LEFT)
         ttk.Combobox(style_row, textvariable=self.atom_style_var,
-                     values=["atomic", "charge", "molecular"], width=10).pack(side=tk.LEFT)
+                     values=["atomic", "charge", "full"], width=10).pack(side=tk.LEFT)
         style_row.pack(pady=2)
 
         # Output file selection
