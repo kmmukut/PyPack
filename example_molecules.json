@@ -1,0 +1,4 @@
+[
+  {"name": "methane", "smiles": "C", "count": 30},
+  {"name": "oxygen", "file": "oxygen.xyz", "count": 12}
+]

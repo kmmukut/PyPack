@@ -1,13 +1,15 @@
 import numpy as np
 import math
 import os
+import argparse
+import json
+
 from openbabel import pybel
 from ase import Atoms
 from ase.io import read as ase_read, write
 from ase.md.velocitydistribution import MaxwellBoltzmannDistribution
 from scipy.spatial import cKDTree
 
-# Generate molecule and write to .xyz using Open Babel
 def generate_obabel_xyz(smiles, name):
     mol = pybel.readstring("smi", smiles)
     mol.addh()
@@ -17,18 +19,17 @@ def generate_obabel_xyz(smiles, name):
     mol.write("xyz", xyz_file, overwrite=True)
     return xyz_file
 
-# Load .xyz into ASE
 def obabel_to_ase(xyz_file):
     return ase_read(xyz_file)
 
 def get_molecule_mass(ase_atoms):
-    return ase_atoms.get_masses().sum()  # in atomic mass units
+    return ase_atoms.get_masses().sum()
 
 def estimate_box_size_from_density(mol_masses, total_counts, density_gcc):
     total_mass_amu = sum(m * c for m, c in zip(mol_masses, total_counts))
-    total_mass_g = total_mass_amu * 1.66054e-24  # convert amu to grams
+    total_mass_g = total_mass_amu * 1.66054e-24
     volume_cm3 = total_mass_g / density_gcc
-    volume_A3 = volume_cm3 * 1e24  # convert cm³ to Å³
+    volume_A3 = volume_cm3 * 1e24
     return round(volume_A3 ** (1/3), 2)
 
 def random_rotate(mol):
@@ -46,8 +47,6 @@ def place_molecules_kdtree(molecules, box_size, min_dist, max_attempts):
             random_rotate(mol_copy)
             displacement = np.random.rand(3) * box_size
             mol_copy.translate(displacement)
-
-            # Wrap coordinates into the box
             positions = mol_copy.get_positions() % box_size
             mol_copy.set_positions(positions)
 
@@ -77,11 +76,18 @@ def build_system(molecule_defs, density_gcc, temperature, min_dist=1.2, max_atte
 
     for mol_def in molecule_defs:
         name = mol_def["name"]
-        smiles = mol_def["smiles"]
+        smiles = mol_def.get("smiles", "")
+        file_path = mol_def.get("file", "")
         count = mol_def["count"]
 
-        xyz_file = generate_obabel_xyz(smiles, name)
-        ase_mol = obabel_to_ase(xyz_file)
+        if file_path:
+            ase_mol = ase_read(file_path)
+        elif smiles:
+            xyz_file = generate_obabel_xyz(smiles, name)
+            ase_mol = obabel_to_ase(xyz_file)
+        else:
+            raise ValueError(f"Neither SMILES nor file provided for molecule '{name}'")
+
         mass = get_molecule_mass(ase_mol)
 
         ase_molecules.append(ase_mol)
@@ -90,7 +96,6 @@ def build_system(molecule_defs, density_gcc, temperature, min_dist=1.2, max_atte
         flat_molecule_list += [ase_mol.copy() for _ in range(count)]
 
     box_size = estimate_box_size_from_density(mol_masses, total_counts, density_gcc)
-    # box_size = max(box_size, 50.0)
 
     for attempt in range(5):
         print(f"Packing attempt {attempt+1}: box = {box_size:.2f} Å")
@@ -105,19 +110,46 @@ def build_system(molecule_defs, density_gcc, temperature, min_dist=1.2, max_atte
 
     raise RuntimeError("Failed to pack molecules after 5 attempts.")
 
+# ---------------------------
+# CLI Support
+# ---------------------------
+def cli():
+    parser = argparse.ArgumentParser(description="Run molecular packing via CLI.")
+    parser.add_argument("--json", help="Path to JSON file with molecule definitions")
+    parser.add_argument("--format", default="lammps-data", choices=["lammps-data", "xyz"], help="Output format")
+    parser.add_argument("--output", default="reax_input.data", help="Output file name")
+    parser.add_argument("--atom_style", default="charge", choices=["atomic", "charge", "full"], help="Atom style (LAMMPS only)")
+    parser.add_argument("--density", type=float, default=0.1, help="Target density (g/cm³)")
+    parser.add_argument("--temperature", type=float, default=300, help="Temperature (K)")
+    parser.add_argument("--min_dist", type=float, default=1.2, help="Minimum interatomic distance (Å)")
+    parser.add_argument("--max_attempts", type=int, default=2000, help="Max placement attempts")
+
+    args = parser.parse_args()
+
+    if args.json:
+        with open(args.json) as f:
+            molecules = json.load(f)
+    else:
+        molecules = [
+            {"name": "methane", "smiles": "C", "count": 30},
+            {"name": "oxygen", "smiles": "O=O", "count": 12}
+        ]
+
+    system = build_system(
+        molecules,
+        density_gcc=args.density,
+        temperature=args.temperature,
+        min_dist=args.min_dist,
+        max_attempts=args.max_attempts
+    )
+
+    write_args = dict(format=args.format)
+    if args.format == "lammps-data":
+        write_args.update(atom_style=args.atom_style, masses=True)
+
+    print(f"Writing to {args.output} in {args.format} format...")
+    write(args.output, system, **write_args)
+    print("Done.")
+
 if __name__ == "__main__":
-    molecules = [
-        {"name": "methane", "smiles": "C", "count": 30},
-        {"name": "oxygen", "smiles": "O=O", "count": 12},
-        {"name": "water", "smiles": "O", "count": 20},
-        {"name": "hydrogen", "smiles": "[H]", "count": 20},
-        {"name": "nitrogen", "smiles": "N#N", "count": 20},
-        {"name": "carbon_dioxide", "smiles": "O=C=O", "count": 20},
-        {"name": "hydrogen_sulfide", "smiles": "S", "count": 20},
-        {"name": "sulfur_dioxide", "smiles": "O=S=O", "count": 20},
-        {"name": "ammonia", "smiles": "N", "count": 20},
-        {"name": "n-dodecane", "smiles": "CCCCCCCCCCCC", "count": 20}
-    ]
-    system = build_system(molecules, density_gcc=0.1, temperature=3200, min_dist=1.2, max_attempts=2000)
-    write("reax_input.data", system, format="lammps-data", atom_style="charge", masses=True)
-    print(" LAMMPS ReaxFF input file written to: reax_input.data")
+    cli()
