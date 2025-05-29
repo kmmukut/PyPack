@@ -2,7 +2,8 @@
 
 **PyPack** is a Python toolkit for building molecular simulation systems from SMILES strings or structure files. It enables collision-free packing into 3D periodic boxes with support for LAMMPS and XYZ outputs, with **on-the-fly conformer generation** for maximum diversity. Includes a modern Tkinter GUI with embedded console.
 
-![image](https://github.com/user-attachments/assets/a085dc94-a216-47b4-9aab-978ebbbf1422)
+![gui](https://github.com/user-attachments/assets/9624641a-03ca-4d8f-b0e5-5330ff2c8d3e)
+
 
 ---
 
